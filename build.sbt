@@ -61,37 +61,27 @@ developers := List(
 
 licenses += ("BSD 3 Clause", url("https://opensource.org/licenses/BSD-3-Clause"))
 
-publishMavenStyle := true
-
-publishTo := {
-  val nexus = "https://oss.sonatype.org/"
-  if (isSnapshot.value)
-    Some("snapshots" at nexus + "content/repositories/snapshots")
-  else
-    Some("releases" at nexus + "service/local/staging/deploy/maven2")
-}
-
 publishArtifact in Test := false
 
 pomIncludeRepository := (_ => false)
 
-import ReleaseTransformations._
-releaseCrossBuild := true
-releasePublishArtifactsAction := PgpKeys.publishSigned.value // Use publishSigned in publishArtifacts step
-releaseProcess := Seq[ReleaseStep](
-  checkSnapshotDependencies,
-  inquireVersions,
-  runClean,
-  runTest,
-  setReleaseVersion,
-  commitReleaseVersion,
-  tagRelease,
-  publishArtifacts,
-  setNextVersion,
-  commitNextVersion,
-  releaseStepCommand("sonatypeReleaseAll"),
-  pushChanges
-)
+//import ReleaseTransformations._
+//releaseCrossBuild := true
+//releasePublishArtifactsAction := PgpKeys.publishSigned.value // Use publishSigned in publishArtifacts step
+//releaseProcess := Seq[ReleaseStep](
+//  checkSnapshotDependencies,
+//  inquireVersions,
+//  runClean,
+//  runTest,
+//  setReleaseVersion,
+//  commitReleaseVersion,
+//  tagRelease,
+//  publishArtifacts,
+//  setNextVersion,
+//  commitNextVersion,
+//  releaseStepCommand("sonatypeReleaseAll"),
+//  pushChanges
+//)
 
 val flagsFor11 = Seq(
   "-Xlint:_",
@@ -114,6 +104,17 @@ scalacOptions ++= {
     case Some((2, n)) if n == 11 =>
       flagsFor11
   }
+}
+
+publishMavenStyle := false
+resolvers ++= Seq[Resolver](
+  s3resolver.value("Releases resolver", s3("releases.artifacts.budgets.money")),
+  s3resolver.value("Snapshots resolver", s3("snapshots.artifacts.budgets.money"))
+)
+
+publishTo := {
+  val prefix = if (isSnapshot.value) "snapshots" else "releases"
+  Some(s3resolver.value(s"My $prefix S3 bucket", s3(s"$prefix.artifacts.budgets.money")) withIvyPatterns)
 }
 
 parallelExecution in IntegrationTest := false
